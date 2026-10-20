@@ -1,16 +1,17 @@
 -- =======================================================
--- LOW PIECE MASTER V10.1 - SISTEMA COMPACTO DE RAID AUTOMÁTICO (FIXED)
+-- LOW PIECE MASTER V11.0 - SISTEMA COMPACTO DE RAID (FULL AUTO FIX)
 -- =======================================================
 
 _G.AgruparRaidActivo = false
 _G.AutoClickActivo = false
 _G.AutoSkillsActivo = false
 _G.AutoLobbyActivo = false
-
-_G.RaidSelecionada = "DesertRaid"
-_G.DificuldadeSelecionada = "Normal"
 _G.RaioDaArea = 50
 _G.MostrarArea = false
+
+-- Opções selecionadas via painel
+_G.RaidSelecionada = "DesertRaid" -- Padrão
+_G.DificuldadeSelecionada = "NormalButton" -- Padrão
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -18,13 +19,13 @@ local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
 
 -- Limpeza de instâncias antigas
-if CoreGui:FindFirstChild("LowPieceMasterV10_Fixed") then 
-    CoreGui.LowPieceMasterV10_Fixed:Destroy() 
+if CoreGui:FindFirstChild("LowPieceMasterV11") then 
+    CoreGui.LowPieceMasterV11:Destroy() 
 end
 
 local rng = Random.new()
 
--- Indicador visual da área
+-- Indicador visual local da área
 local IndicadorArea = Instance.new("Part")
 IndicadorArea.Shape = Enum.PartType.Ball
 IndicadorArea.Material = Enum.Material.ForceField
@@ -34,9 +35,11 @@ IndicadorArea.Anchored = true
 IndicadorArea.CanCollide = false
 IndicadorArea.Parent = workspace
 
--- Interface Visual Reestruturada
+-- =======================================================
+-- INTERFACE VISUAL TOTALMENTE REFORMULADA
+-- =======================================================
 local GUI = Instance.new("ScreenGui")
-GUI.Name = "LowPieceMasterV10_Fixed"
+GUI.Name = "LowPieceMasterV11"
 GUI.Parent = CoreGui
 GUI.ResetOnSpawn = false
 
@@ -53,10 +56,10 @@ local mc = Instance.new("UICorner") mc.CornerRadius = UDim.new(0, 8) mc.Parent =
 local InfoLabel = Instance.new("TextLabel")
 InfoLabel.Size = UDim2.new(1, 0, 0, 30)
 InfoLabel.Position = UDim2.new(0, 0, 0, 5)
-InfoLabel.Text = "Low Piece Master V10.1"
-InfoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+InfoLabel.Text = "Raio Atual: " .. _G.RaioDaArea
+InfoLabel.TextColor3 = Color3.fromRGB(160, 255, 160)
 InfoLabel.Font = Enum.Font.GothamBold
-InfoLabel.TextSize = 14
+InfoLabel.TextSize = 13
 InfoLabel.BackgroundTransparency = 1
 InfoLabel.Parent = Main
 
@@ -64,13 +67,14 @@ local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, 0, 0, 25)
 StatusLabel.Position = UDim2.new(0, 0, 1, -30)
 StatusLabel.Text = "Status: Aguardando Comando..."
-StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 150)
 StatusLabel.Font = Enum.Font.GothamSemibold
 StatusLabel.TextSize = 11
-StatusLabel.BackgroundTransparency = 1
+StatusLabel.BackgroundTransparency = 0.9
+StatusLabel.BackgroundColor3 = Color3.fromRGB(0,0,0)
 StatusLabel.Parent = Main
 
-local function criarBotao(texto, pos, tamanho, cor, acao, parent)
+local function criarBotao(texto, pos, tamanho, cor, acao)
     local btn = Instance.new("TextButton")
     btn.Size = tamanho
     btn.Position = pos
@@ -79,162 +83,118 @@ local function criarBotao(texto, pos, tamanho, cor, acao, parent)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamSemibold
     btn.TextSize = 11
-    btn.Parent = parent or Main
+    btn.Parent = Main
     local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 5) c.Parent = btn
     btn.MouseButton1Click:Connect(function() acao(btn) end)
     return btn
 end
 
--- Botões de Combate Alternáveis
-local btnPuxar = criarBotao("Puxar NPCs", UDim2.new(0, 15, 0, 40), UDim2.new(0, 140, 0, 30), Color3.fromRGB(60, 45, 80), function(btn)
+-- 1. Seção de Combate
+criarBotao("Puxar NPCs", UDim2.new(0, 15, 0, 40), UDim2.new(0, 140, 0, 30), Color3.fromRGB(60, 45, 80), function(btn)
     _G.AgruparRaidActivo = not _G.AgruparRaidActivo
     btn.BackgroundColor3 = _G.AgruparRaidActivo and Color3.fromRGB(110, 60, 160) or Color3.fromRGB(60, 45, 80)
 end)
 
-local btnClick = criarBotao("Auto Clique", UDim2.new(0, 165, 0, 40), UDim2.new(0, 140, 0, 30), Color3.fromRGB(45, 70, 55), function(btn)
+criarBotao("Simular Clique", UDim2.new(0, 165, 0, 40), UDim2.new(0, 140, 0, 30), Color3.fromRGB(45, 70, 55), function(btn)
     _G.AutoClickActivo = not _G.AutoClickActivo
     btn.BackgroundColor3 = _G.AutoClickActivo and Color3.fromRGB(60, 150, 90) or Color3.fromRGB(45, 70, 55)
 end)
 
-local btnSkills = criarBotao("Auto Habilidades", UDim2.new(0, 15, 0, 75), UDim2.new(0, 140, 0, 30), Color3.fromRGB(70, 65, 45), function(btn)
+criarBotao("Simular Skills", UDim2.new(0, 15, 0, 75), UDim2.new(0, 140, 0, 30), Color3.fromRGB(70, 65, 45), function(btn)
     _G.AutoSkillsActivo = not _G.AutoSkillsActivo
     btn.BackgroundColor3 = _G.AutoSkillsActivo and Color3.fromRGB(160, 140, 50) or Color3.fromRGB(70, 65, 45)
 end)
 
-local btnVerArea = criarBotao("Visualizar Área", UDim2.new(0, 165, 0, 75), UDim2.new(0, 140, 0, 30), Color3.fromRGB(45, 60, 75), function(btn)
+criarBotao("Ver Área", UDim2.new(0, 165, 0, 75), UDim2.new(0, 140, 0, 30), Color3.fromRGB(45, 60, 75), function(btn)
     _G.MostrarArea = not _G.MostrarArea
     btn.BackgroundColor3 = _G.MostrarArea and Color3.fromRGB(50, 110, 170) or Color3.fromRGB(45, 60, 75)
 end)
 
--- Painel de Seleção de Raid
-local RaidFrame = Instance.new("Frame")
-RaidFrame.Size = UDim2.new(0, 290, 0, 100)
-RaidFrame.Position = UDim2.new(0, 15, 0, 115)
-RaidFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-RaidFrame.BorderSizePixel = 0
-RaidFrame.Parent = Main
-local rc = Instance.new("UICorner") rc.CornerRadius = UDim.new(0, 5) rc.Parent = RaidFrame
-
-local RaidTitle = Instance.new("TextLabel")
-RaidTitle.Size = UDim2.new(1, 0, 0, 20)
-RaidTitle.Text = "Selecione a Raid alvo:"
-RaidTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
-RaidTitle.Font = Enum.Font.GothamBold
-RaidTitle.TextSize = 10
-RaidTitle.BackgroundTransparency = 1
-RaidTitle.Parent = RaidFrame
-
+-- 2. Seção de Escolha de Raids
+local Raids = {"DesertRaid", "JojoRaid", "JudgmentHallRaid", "SoulEaterRaid"}
 local botoesRaid = {}
-local raids = {"DesertRaid", "JojoRaid", "JudgmentHallRaid", "SoulEaterRaid"}
-
-local function atualizarRaidBotoes()
-    for nome, btn in pairs(botoesRaid) do
-        btn.BackgroundColor3 = (_G.RaidSelecionada == nome) and Color3.fromRGB(45, 110, 165) or Color3.fromRGB(50, 50, 60)
-    end
+for i, raidNome in ipairs(Raids) do
+    local posY = 115 + ((i-1) * 32)
+    local btn = criarBotao(raidNome, UDim2.new(0, 15, 0, posY), UDim2.new(0, 290, 0, 28), Color3.fromRGB(40, 45, 50), function(self)
+        _G.RaidSelecionada = raidNome
+        for _, b in pairs(botoesRaid) do b.BackgroundColor3 = Color3.fromRGB(40, 45, 50) end
+        self.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+        StatusLabel.Text = "Raid Alvo: " .. raidNome
+    end)
+    if raidNome == _G.RaidSelecionada then btn.BackgroundColor3 = Color3.fromRGB(0, 120, 200) end
+    table.insert(botoesRaid, btn)
 end
 
-for i, nomeRaid in ipairs(raids) do
-    local x = ((i-1) % 2) * 140 + 5
-    local y = math.floor((i-1) / 2) * 35 + 25
-    local btn = criarBotao(nomeRaid, UDim2.new(0, x, 0, y), UDim2.new(0, 135, 0, 30), Color3.fromRGB(50, 50, 60), function()
-        _G.RaidSelecionada = nomeRaid
-        atualizarRaidBotoes()
-    end, RaidFrame)
-    botoesRaid[nomeRaid] = btn
-end
-atualizarRaidBotoes()
-
--- Painel de Seleção de Dificuldade
-local DifFrame = Instance.new("Frame")
-DifFrame.Size = UDim2.new(0, 290, 0, 60)
-DifFrame.Position = UDim2.new(0, 15, 0, 225)
-DifFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-DifFrame.BorderSizePixel = 0
-DifFrame.Parent = Main
-local dc = Instance.new("UICorner") dc.CornerRadius = UDim.new(0, 5) dc.Parent = DifFrame
-
-local DifTitle = Instance.new("TextLabel")
-DifTitle.Size = UDim2.new(1, 0, 0, 20)
-DifTitle.Text = "Selecione a Dificuldade:"
-DifTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
-DifTitle.Font = Enum.Font.GothamBold
-DifTitle.TextSize = 10
-DifTitle.BackgroundTransparency = 1
-DifTitle.Parent = DifFrame
-
+-- 3. Seção de Escolha de Dificuldade
+local Dificuldades = {
+    {Nome = "Fácil", ID = "EasyButton", PosX = 15},
+    {Nome = "Normal", ID = "NormalButton", PosX = 115},
+    {Nome = "Difícil", ID = "HardButton", PosX = 215}
+}
 local botoesDif = {}
-local dificuldades = {"Easy", "Normal", "Hard"}
+for _, dif in ipairs(Dificuldades) do
+    local btn = criarBotao(dif.Nome, UDim2.new(0, dif.PosX, 0, 250), UDim2.new(0, 90, 0, 28), Color3.fromRGB(45, 45, 45), function(self)
+        _G.DificuldadeSelecionada = dif.ID
+        for _, b in pairs(botoesDif) do b.BackgroundColor3 = Color3.fromRGB(45, 45, 45) end
+        self.BackgroundColor3 = Color3.fromRGB(180, 100, 20)
+    end)
+    if dif.ID == _G.DificuldadeSelecionada then btn.BackgroundColor3 = Color3.fromRGB(180, 100, 20) end
+    table.insert(botoesDif, btn)
+end
 
-local function atualizarDifBotoes()
-    for nome, btn in pairs(botoesDif) do
-        btn.BackgroundColor3 = (_G.DificuldadeSelecionada == nome) and Color3.fromRGB(165, 110, 45) or Color3.fromRGB(50, 50, 60)
+-- Controladores de Raio de Área
+criarBotao("Área +25", UDim2.new(0, 15, 0, 290), UDim2.new(0, 140, 0, 28), Color3.fromRGB(35, 35, 35), function()
+    _G.RaioDaArea = _G.RaioDaArea + 25
+    InfoLabel.Text = "Raio Atual: " .. _G.RaioDaArea
+end)
+criarBotao("Área -25", UDim2.new(0, 165, 0, 290), UDim2.new(0, 140, 0, 28), Color3.fromRGB(35, 35, 35), function()
+    if _G.RaioDaArea > 25 then
+        _G.RaioDaArea = _G.RaioDaArea - 25
+        InfoLabel.Text = "Raio Atual: " .. _G.RaioDaArea
     end
-end
+end)
 
-for i, nomeDif in ipairs(dificuldades) do
-    local x = (i-1) * 92 + 5
-    local btn = criarBotao(nomeDif, UDim2.new(0, x, 0, 25), UDim2.new(0, 88, 0, 30), Color3.fromRGB(50, 50, 60), function()
-        _G.DificuldadeSelecionada = nomeDif
-        atualizarDifBotoes()
-    end, DifFrame)
-    botoesDif[nomeDif] = btn
-end
-atualizarDifBotoes()
-
--- Botão Mestre de Automação do Loop Cíclico
-local btnLoopMestre = criarBotao("INICIAR LOOP AUTOMÁTICO DE RAID", UDim2.new(0, 15, 0, 295), UDim2.new(0, 290, 0, 40), Color3.fromRGB(120, 40, 40), function(btn)
+-- 4. BOTÃO MESTRE: LOOP AUTOMÁTICO COMPLETO
+local btnAutoLobby = criarBotao("INICIAR LOOP DE RAID (AUTO)", UDim2.new(0, 15, 0, 335), UDim2.new(0, 290, 0, 40), Color3.fromRGB(120, 30, 30), function(btn)
     _G.AutoLobbyActivo = not _G.AutoLobbyActivo
     if _G.AutoLobbyActivo then
-        btn.BackgroundColor3 = Color3.fromRGB(50, 160, 90)
-        btn.Text = "LOOP AUTOMÁTICO ATIVADO [ON]"
-        
-        -- Ativa dinamicamente os hacks utilitários de combate junto
-        _G.AgruparRaidActivo = true
-        _G.AutoClickActivo = true
-        _G.AutoSkillsActivo = true
-        
-        btnPuxar.BackgroundColor3 = Color3.fromRGB(110, 60, 160)
-        btnClick.BackgroundColor3 = Color3.fromRGB(60, 150, 90)
-        btnSkills.BackgroundColor3 = Color3.fromRGB(160, 140, 50)
+        btn.BackgroundColor3 = Color3.fromRGB(0, 180, 60)
+        btn.Text = "LOOP ATIVADO (RODANDO)"
     else
-        btn.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
-        btn.Text = "INICIAR LOOP AUTOMÁTICO DE RAID"
-        StatusLabel.Text = "Status: Automação desligada."
+        btn.BackgroundColor3 = Color3.fromRGB(120, 30, 30)
+        btn.Text = "INICIAR LOOP DE RAID (AUTO)"
+        StatusLabel.Text = "Status: Parado."
     end
 end)
 
-criarBotao("Config: Raio +25", UDim2.new(0, 15, 0, 345), UDim2.new(0, 140, 0, 30), Color3.fromRGB(40, 40, 45), function()
-    _G.RaioDaArea = _G.RaioDaArea + 25
-end)
-
-criarBotao("Config: Raio -25", UDim2.new(0, 165, 0, 345), UDim2.new(0, 140, 0, 30), Color3.fromRGB(40, 40, 45), function()
-    if _G.RaioDaArea > 25 then _G.RaioDaArea = _G.RaioDaArea - 25 end
-end)
-
-
 -- =======================================================
--- MÓDULOS DE VERIFICAÇÃO E COMBATE
+-- LOOPS E SISTEMAS DE SEGUNDO PLANO
 -- =======================================================
 
+-- Função para verificar se existem inimigos por perto
 local function temNpcNaFrente(rootPlayer)
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Humanoid") and obj.Parent and obj.Health > 0 then
-            local npcModel = obj.Parent
-            if not Players:GetPlayerFromCharacter(npcModel) then
-                local rootNpc = npcModel:FindFirstChild("HumanoidRootPart") or npcModel:FindFirstChildWhichIsA("BasePart")
-                if rootNpc then
-                    local distancia = (rootPlayer.Position - rootNpc.Position).Magnitude
-                    if distancia <= (_G.RaioDaArea + 10) then
-                        return true
+    local encontrou = false
+    pcall(function()
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("Humanoid") and obj.Parent and obj.Health > 0 then
+                local npcModel = obj.Parent
+                if not Players:GetPlayerFromCharacter(npcModel) then
+                    local rootNpc = npcModel:FindFirstChild("HumanoidRootPart")
+                    if rootNpc then
+                        local distancia = (rootPlayer.Position - rootNpc.Position).Magnitude
+                        if distancia <= (_G.RaioDaArea + 15) then
+                            encontrou = true
+                            break
+                        end
                     end
                 end
             end
         end
-    end
-    return false
+    end)
+    return encontrou
 end
 
--- 1. Loop Físico: Puxada Global de Inimigos e Indicadores de Área
+-- 1. Loop Físico: Puxada de NPCs e Esfera Visual
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -256,12 +216,14 @@ task.spawn(function()
                         if obj:IsA("Humanoid") and obj.Parent and obj.Health > 0 then
                             local npcModel = obj.Parent
                             if not Players:GetPlayerFromCharacter(npcModel) then
-                                local rootNpc = npcModel:FindFirstChild("HumanoidRootPart") or npcModel:FindFirstChildWhichIsA("BasePart")
-                                if rootNpc and rootNpc ~= rootPlayer then
+                                local rootNpc = npcModel:FindFirstChild("HumanoidRootPart")
+                                if rootNpc then
                                     local distancia = (rootPlayer.Position - rootNpc.Position).Magnitude
                                     if distancia <= _G.RaioDaArea then
                                         for _, part in pairs(npcModel:GetDescendants()) do
-                                            if part:IsA("BasePart") then part.CanCollide = false end
+                                            if part:IsA("BasePart") then
+                                                part.CanCollide = false
+                                            end
                                         end
                                         rootNpc.CFrame = rootPlayer.CFrame * CFrame.new(0, 0, -4)
                                     end
@@ -277,7 +239,7 @@ task.spawn(function()
     end
 end)
 
--- 2. Loop de Ataques por Clique M1
+-- 2. Loop de Ataques Automáticos (Clique)
 task.spawn(function()
     while true do
         task.wait(rng:NextNumber(0.15, 0.25))
@@ -291,7 +253,7 @@ task.spawn(function()
     end
 end)
 
--- 3. Loop de Ataques por Teclas Especiais (Skills)
+-- 3. Loop de Habilidades Automáticas
 local chaves = {"z", "x", "c", "v"}
 task.spawn(function()
     while true do
@@ -304,9 +266,9 @@ task.spawn(function()
                     for _, tecla in pairs(chaves) do
                         if not _G.AutoSkillsActivo or not temNpcNaFrente(rootPlayer) then break end
                         VirtualUser:SetKeyDown(tecla)
-                        task.wait(rng:NextNumber(0.04, 0.08))
+                        task.wait(rng:NextNumber(0.05, 0.08))
                         VirtualUser:SetKeyUp(tecla)
-                        task.wait(rng:NextNumber(0.40, 0.75))
+                        task.wait(rng:NextNumber(0.35, 0.60))
                     end
                 end)
             end
@@ -314,94 +276,80 @@ task.spawn(function()
     end
 end)
 
-
--- =======================================================
--- NÚCLEO DA AUTOMAÇÃO CÍCLICA DE RAID E CORREÇÃO DE TELEPORT
--- =======================================================
-
+-- 4. NOVO: MÁQUINA DE ESTADO INTELIGENTE E AUTOMÁTICA
 task.spawn(function()
     while true do
         task.wait(1)
-        
         if _G.AutoLobbyActivo then
             local character = LocalPlayer.Character
             local rootPlayer = character and character:FindFirstChild("HumanoidRootPart")
             local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
             
             if rootPlayer then
-                -- Se já houver inimigos ativos por perto, o script entra em espera produtiva e luta
+                -- Verifica se JÁ está dentro de uma batalha/Raid ocorrendo
                 if temNpcNaFrente(rootPlayer) then
-                    StatusLabel.Text = "Status: Em combate! Limpando sala..."
-                    task.wait(2)
+                    StatusLabel.Text = "Status: Em combate! Defendendo sala..."
+                    -- Garante que o auto-ataque e puxada fiquem ativos na ação
+                    _G.AutoClickActivo = true
+                    _G.AutoSkillsActivo = true
+                    _G.AgruparRaidActivo = true
                 else
-                    StatusLabel.Text = "Status: Procurando lobby selecionado..."
+                    StatusLabel.Text = "Status: Procurando/Aguardando Lobby..."
                     
-                    -- Busca o caminho dinâmico da Raid que foi escolhida na tela
-                    local caminhoLobby = workspace:臨時CFrameBusca(workspace:FindFirstChild("RaidSystem"))
+                    -- Busca o objeto selecionado de maneira dinâmica e segura
                     local raidSystem = workspace:FindFirstChild("RaidSystem")
                     local lobbies = raidSystem and raidSystem:FindFirstChild("Lobbies")
                     local alvoLobby = lobbies and lobbies:FindFirstChild(_G.RaidSelecionada)
                     
                     if alvoLobby then
-                        -- SOLUÇÃO UNIVERSAL DE TELEPORT: Usa GetPivot() para evitar erros se for modelo ou bloco
-                        local localCFrame = nil
-                        if alvoLobby:IsA("Model") then
-                            localCFrame = alvoLobby:GetPivot()
-                        elseif alvoLobby:IsA("BasePart") then
-                            localCFrame = alvoLobby.CFrame
+                        local posicaoAlvo = nil
+                        if alvoLobby:IsA("BasePart") then
+                            posicaoAlvo = alvoLobby.CFrame
+                        elseif alvoLobby:IsA("Model") then
+                            posicaoAlvo = alvoLobby:GetPivot()
                         end
                         
-                        if localCFrame then
-                            local distanciaLobby = (rootPlayer.Position - localCFrame.Position).Magnitude
+                        if posicaoAlvo then
+                            local distancia = (rootPlayer.Position - posicaoAlvo.Position).Magnitude
                             
-                            -- Se estiver longe do lobby marcado, executa o deslocamento físico imediato
-                            if distanciaLobby > 12 then
-                                StatusLabel.Text = "Status: Teleportando para " .. _G.RaidSelecionada .. "..."
-                                
-                                -- Desativa temporariamente a gravidade e colisões locais para evitar travar no mapa
-                                pcall(function()
-                                    for _, part in pairs(character:GetDescendants()) do
-                                        if part:IsA("BasePart") then part.CanCollide = false end
-                                    end
-                                    -- Teleporta com 3.5 studs de folga no eixo Y (altura)
-                                    rootPlayer.CFrame = localCFrame * CFrame.new(0, 3.5, 0)
-                                end)
-                                
-                                task.wait(0.6) -- Janela de tolerância para o Roblox carregar o mapa
+                            -- Se estiver longe do lobby, faz o Teleporte Rígido Imediato
+                            if distancia > 15 then
+                                StatusLabel.Text = "Status: Teleportando para " .. _G.RaidSelecionada
+                                rootPlayer.CFrame = posicaoAlvo * CFrame.new(0, 3, 0)
+                                task.wait(0.8) -- Tempo técnico de sincronização física com o servidor
                             end
                             
-                            -- Gerenciamento de ativação dos Menus no Painel da Tela
+                            -- Manipulação da Interface do Jogo (Iniciar a Partida)
                             if playerGui then
                                 local raidUI = playerGui:FindFirstChild("RaidUI")
                                 local difficultyFrame = raidUI and raidUI:FindFirstChild("DifficultyFrame")
                                 
                                 if difficultyFrame and difficultyFrame.Visible then
-                                    StatusLabel.Text = "Status: Configurando Dificuldade (" .. _G.DificuldadeSelecionada .. ")..."
+                                    StatusLabel.Text = "Status: Configurando Dificuldade..."
                                     
                                     pcall(function()
-                                        -- Associa a escolha do painel ao botão correspondente da UI nativa
-                                        local botaoAlvoDificuldade = difficultyFrame:FindFirstChild(_G.DificuldadeSelecionada .. "Button")
-                                        local startNowBtn = difficultyFrame:FindFirstChild("StartNowButton")
-                                        
-                                        if botaoAlvoDificuldade and botaoAlvoDificuldade.Visible then
-                                            local posDif = botaoAlvoDificuldade.AbsolutePosition
-                                            VirtualUser:ClickButton1(Vector2.new(posDif.X + 15, posDif.Y + 45))
+                                        -- Clica no botão correspondente à Dificuldade Escolhida no Painel
+                                        local btnDif = difficultyFrame:FindFirstChild(_G.DificuldadeSelecionada)
+                                        if btnDif and btnDif.Visible then
+                                            local pos = btnDif.AbsolutePosition
+                                            VirtualUser:ClickButton1(Vector2.new(pos.X + 10, pos.Y + 40))
                                             task.wait(0.3)
                                         end
                                         
+                                        -- Clica em StartNow
+                                        local startNowBtn = difficultyFrame:FindFirstChild("StartNowButton")
                                         if startNowBtn and startNowBtn.Visible then
                                             local posStart = startNowBtn.AbsolutePosition
-                                            VirtualUser:ClickButton1(Vector2.new(posStart.X + 15, posStart.Y + 45))
-                                            StatusLabel.Text = "Status: Raid Iniciada com Sucesso!"
-                                            task.wait(3) -- Aguarda carregamento inicial da sala
+                                            VirtualUser:ClickButton1(Vector2.new(posStart.X + 10, posStart.Y + 40))
+                                            StatusLabel.Text = "Status: Raid Iniciada!"
+                                            task.wait(2)
                                         end
-                                     pcall(function() end) end)
+                                    end)
                                 end
                             end
                         end
                     else
-                        StatusLabel.Text = "⚠️ ERRO: O objeto '" .. _G.RaidSelecionada .. "' não foi achado no mapa!"
-                        print("[LOW PIECE ERROR]: Não foi possível ler o caminho da Raid selecionada.")
+                        StatusLabel.Text = "Status: ERRO - Lobby não localizado!"
                     end
                 end
             end
@@ -409,4 +357,4 @@ task.spawn(function()
     end
 end)
 
-print("[LOW PIECE] Script Master V10.1 (Auto-Cycle & GetPivot Universal) Carregado!")
+print("[LOW PIECE] Script Master V11.0 Carregado com Sucesso. (Corrigido)")
