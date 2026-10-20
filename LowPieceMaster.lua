@@ -1,10 +1,11 @@
 -- =======================================================
--- LOW PIECE MASTER V8.0 - SISTEMA COMPACTO DE RAID (FIXED)
+-- LOW PIECE MASTER V9.5 - SISTEMA COMPACTO DE RAID + AUTO TELEPORT LOBBY
 -- =======================================================
 
 _G.AgruparRaidActivo = false
 _G.AutoClickActivo = false
 _G.AutoSkillsActivo = false
+_G.AutoLobbyActivo = false -- Nova automação de teletransporte e entrada automática
 _G.RaioDaArea = 50
 _G.MostrarArea = false
 
@@ -13,9 +14,17 @@ local LocalPlayer = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
 
+-- Tabelas de automação fornecidas por você (com tratamento seguro de carregamento)
+local LobbiesRaid = {
+	workspace:WaitForChild("RaidSystem"):WaitForChild("Lobbies"):WaitForChild("DesertRaid"),
+	workspace:WaitForChild("RaidSystem"):WaitForChild("Lobbies"):WaitForChild("JojoRaid"),
+	workspace:WaitForChild("RaidSystem"):WaitForChild("Lobbies"):WaitForChild("JudgmentHallRaid"),
+	workspace:WaitForChild("RaidSystem"):WaitForChild("Lobbies"):WaitForChild("SoulEaterRaid"),
+}
+
 -- Limpeza de instâncias antigas
-if CoreGui:FindFirstChild("LowPieceMasterV6") then 
-    CoreGui.LowPieceMasterV6:Destroy() 
+if CoreGui:FindFirstChild("LowPieceMasterV9_5") then 
+    CoreGui.LowPieceMasterV9_5:Destroy() 
 end
 
 -- Gerador de números pseudo-aleatórios para simulação humana
@@ -35,12 +44,12 @@ IndicadorArea.Parent = workspace
 -- INTERFACE VISUAL RE ESTRUTURADA E LIMPA
 -- =======================================================
 local GUI = Instance.new("ScreenGui")
-GUI.Name = "LowPieceMasterV6"
+GUI.Name = "LowPieceMasterV9_5"
 GUI.Parent = CoreGui
 GUI.ResetOnSpawn = false
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 300, 0, 260)
+Main.Size = UDim2.new(0, 300, 0, 300)
 Main.Position = UDim2.new(0.35, 0, 0.3, 0)
 Main.BackgroundColor3 = Color3.fromRGB(25, 25, 33)
 Main.BorderSizePixel = 0
@@ -89,17 +98,23 @@ local btnSkills = criarBotao("Simular Habilidades", UDim2.new(0, 20, 0, 115), UD
     btn.BackgroundColor3 = _G.AutoSkillsActivo and Color3.fromRGB(160, 140, 50) or Color3.fromRGB(70, 65, 45)
 end)
 
-local btnVerArea = criarBotao("Visualizar Área (Esfera)", UDim2.new(0, 20, 0, 150), UDim2.new(0, 260, 0, 30), Color3.fromRGB(45, 60, 75), function(btn)
+-- Botão de Ativação do Auto Teleport Lobby
+local btnAutoLobby = criarBotao("Auto Teleport + Iniciar Raid", UDim2.new(0, 20, 0, 150), UDim2.new(0, 260, 0, 30), Color3.fromRGB(90, 40, 40), function(btn)
+    _G.AutoLobbyActivo = not _G.AutoLobbyActivo
+    btn.BackgroundColor3 = _G.AutoLobbyActivo and Color3.fromRGB(180, 60, 60) or Color3.fromRGB(90, 40, 40)
+end)
+
+local btnVerArea = criarBotao("Visualizar Área (Esfera)", UDim2.new(0, 20, 0, 185), UDim2.new(0, 260, 0, 30), Color3.fromRGB(45, 60, 75), function(btn)
     _G.MostrarArea = not _G.MostrarArea
     btn.BackgroundColor3 = _G.MostrarArea and Color3.fromRGB(50, 110, 170) or Color3.fromRGB(45, 60, 75)
 end)
 
-criarBotao("Área +25", UDim2.new(0, 20, 0, 195), UDim2.new(0, 120, 0, 30), Color3.fromRGB(40, 40, 45), function()
+criarBotao("Área +25", UDim2.new(0, 20, 0, 230), UDim2.new(0, 120, 0, 30), Color3.fromRGB(40, 40, 45), function()
     _G.RaioDaArea = _G.RaioDaArea + 25
     InfoLabel.Text = "Raio Atual: " .. _G.RaioDaArea
 end)
 
-criarBotao("Área -25", UDim2.new(0, 160, 0, 195), UDim2.new(0, 120, 0, 30), Color3.fromRGB(40, 40, 45), function()
+criarBotao("Área -25", UDim2.new(0, 160, 0, 230), UDim2.new(0, 120, 0, 30), Color3.fromRGB(40, 40, 45), function()
     if _G.RaioDaArea > 25 then
         _G.RaioDaArea = _G.RaioDaArea - 25
         InfoLabel.Text = "Raio Atual: " .. _G.RaioDaArea
@@ -110,7 +125,6 @@ end)
 -- LOOPS E SISTEMAS INDEPENDENTES (CLIENT-SIDE)
 -- =======================================================
 
--- Função para verificar se há algum NPC válido por perto para bater
 local function temNpcNaFrente(rootPlayer)
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("Humanoid") and obj.Parent and obj.Health > 0 then
@@ -129,7 +143,7 @@ local function temNpcNaFrente(rootPlayer)
     return false
 end
 
--- 1. Loop de Monitoramento Físico de Puxada e Indicadores
+-- 1. Loop de Monitoramento Físico, Puxada e Indicadores
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -150,20 +164,16 @@ task.spawn(function()
                     for _, obj in pairs(workspace:GetDescendants()) do
                         if obj:IsA("Humanoid") and obj.Parent and obj.Health > 0 then
                             local npcModel = obj.Parent
-                            -- Trava estrita para ignorar jogadores reais
                             if not Players:GetPlayerFromCharacter(npcModel) then
                                 local rootNpc = npcModel:FindFirstChild("HumanoidRootPart")
                                 if rootNpc then
                                     local distancia = (rootPlayer.Position - rootNpc.Position).Magnitude
-                                    -- Só puxa se já estiver na ilha/área de alcance configurada
                                     if distancia <= _G.RaioDaArea then
-                                        -- Remove colisão local temporária nas partes para não bugar
                                         for _, part in pairs(npcModel:GetDescendants()) do
                                             if part:IsA("BasePart") then
                                                 part.CanCollide = false
                                             end
                                         end
-                                        -- Posiciona rigidamente na frente do player
                                         rootNpc.CFrame = rootPlayer.CFrame * CFrame.new(0, 0, -4)
                                     end
                                 end
@@ -178,13 +188,11 @@ task.spawn(function()
     end
 end)
 
--- 2. Loop de Auto-Clique Humanizado Condicional
+-- 2. Loop de Auto-Clique Humanizado
 task.spawn(function()
     while true do
-        -- Atraso dinâmico de pessoa real jogando (entre 150ms e 300ms por clique)
         local delayClique = rng:NextNumber(0.15, 0.30)
         task.wait(delayClique)
-        
         if _G.AutoClickActivo then
             local character = LocalPlayer.Character
             local rootPlayer = character and character:FindFirstChild("HumanoidRootPart")
@@ -197,7 +205,7 @@ task.spawn(function()
     end
 end)
 
--- 3. Loop de Habilidades Humanizadas Condicionais (Teclado Z, X, C, V)
+-- 3. Loop de Habilidades (Z, X, C, V)
 local chaves = {"z", "x", "c", "v"}
 task.spawn(function()
     while true do
@@ -205,18 +213,13 @@ task.spawn(function()
         if _G.AutoSkillsActivo then
             local character = LocalPlayer.Character
             local rootPlayer = character and character:FindFirstChild("HumanoidRootPart")
-            
             if rootPlayer and temNpcNaFrente(rootPlayer) then
                 pcall(function()
                     for _, tecla in pairs(chaves) do
                         if not _G.AutoSkillsActivo or not temNpcNaFrente(rootPlayer) then break end
-                        
-                        -- Simulação do pressionar mecânico humano da tecla (40ms a 90ms pressionado)
                         VirtualUser:SetKeyDown(tecla)
                         task.wait(rng:NextNumber(0.04, 0.09))
                         VirtualUser:SetKeyUp(tecla)
-                        
-                        -- Tempo de reação mental humano para soltar a próxima skill (400ms a 850ms)
                         task.wait(rng:NextNumber(0.40, 0.85))
                     end
                 end)
@@ -225,4 +228,59 @@ task.spawn(function()
     end
 end)
 
-print("[LOW PIECE] Script Master V8.0 carregado com sucesso.")
+-- 4. NOVO: Automação Baseada em Teletransporte Direto para as Raids
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        
+        if _G.AutoLobbyActivo then
+            local character = LocalPlayer.Character
+            local rootPlayer = character and character:FindFirstChild("HumanoidRootPart")
+            local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+            
+            if rootPlayer then
+                local alvoLobby = nil
+                for _, lobby in pairs(LobbiesRaid) do
+                    if lobby and (lobby:IsA("BasePart") or lobby:FindFirstChild("HumanoidRootPart")) then
+                        alvoLobby = lobby:IsA("BasePart") and lobby or lobby:FindFirstChild("HumanoidRootPart")
+                        break
+                    end
+                end
+                
+                if alvoLobby then
+                    local distanciaAtual = (rootPlayer.Position - alvoLobby.Position).Magnitude
+                    
+                    if distanciaAtual > 8 then
+                        rootPlayer.CFrame = alvoLobby.CFrame * CFrame.new(0, 3, 0)
+                        task.wait(0.5)
+                    end
+                    
+                    if playerGui then
+                        local raidUI = playerGui:FindFirstChild("RaidUI")
+                        local difficultyFrame = raidUI and raidUI:FindFirstChild("DifficultyFrame")
+                        
+                        if difficultyFrame and difficultyFrame.Visible then
+                            pcall(function()
+                                local normalBtn = difficultyFrame:FindFirstChild("NormalButton")
+                                local startNowBtn = difficultyFrame:FindFirstChild("StartNowButton")
+                                
+                                if normalBtn and normalBtn.Visible then
+                                    local posNormal = normalBtn.AbsolutePosition
+                                    VirtualUser:ClickButton1(Vector2.new(posNormal.X + 10, posNormal.Y + 40))
+                                    task.wait(0.2)
+                                end
+                                
+                                if startNowBtn and startNowBtn.Visible then
+                                    local posStart = startNowBtn.AbsolutePosition
+                                    VirtualUser:ClickButton1(Vector2.new(posStart.X + 10, posStart.Y + 40))
+                                end
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+print("[LOW PIECE] Script Master V9.5 carregado com sucesso (Auto-Teleport integrado).")
