@@ -1,5 +1,5 @@
 -- =======================================================
--- LOW PIECE MASTER V18.1 - CÓDIGO COMPLETO (DELTA MOBILE)
+-- LOW PIECE MASTER V18.2 - CORREÇÃO DE EXECUÇÃO (DELTA)
 -- =======================================================
 
 _G.AtravessarNPCsActivo = false
@@ -17,26 +17,30 @@ _G.RaioDaArea = 50
 _G.DistanciaAtras = 3
 
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local CoreGui = game:GetService("CoreGui")
 
 pcall(function()
-    if CoreGui:FindFirstChild("LowPieceMasterV18_Delta") then 
-        CoreGui.LowPieceMasterV18_Delta:Destroy() 
+    if CoreGui:FindFirstChild("LowPieceMasterV18_Fix") then 
+        CoreGui.LowPieceMasterV18_Fix:Destroy() 
     end
-    if LocalPlayer.PlayerGui:FindFirstChild("LowPieceMasterV18_Delta") then
-        LocalPlayer.PlayerGui.LowPieceMasterV18_Delta:Destroy()
+    if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("LowPieceMasterV18_Fix") then
+        LocalPlayer.PlayerGui.LowPieceMasterV18_Fix:Destroy()
     end
 end)
 
 local rng = Random.new()
 
 local GUI = Instance.new("ScreenGui")
-GUI.Name = "LowPieceMasterV18_Delta"
+GUI.Name = "LowPieceMasterV18_Fix"
 GUI.ResetOnSpawn = false
 
-local successParent = pcall(function() GUI.Parent = CoreGui end)
-if not successParent then GUI.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+pcall(function()
+    GUI.Parent = CoreGui
+end)
+if not GUI.Parent or GUI.Parent ~= CoreGui then
+    GUI.Parent = LocalPlayer:WaitForChild("PlayerGui", 5)
+end
 
 local Main = Instance.new("Frame")
 Main.Size = UDim2.new(0, 310, 0, 330)
@@ -61,7 +65,7 @@ local HeaderCorner = Instance.new("UICorner") HeaderCorner.CornerRadius = UDim.n
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "⚡ LOW PIECE HUB V18.1 (DELTA)"
+Title.Text = "⚡ LOW PIECE HUB V18.2"
 Title.TextColor3 = Color3.fromRGB(0, 210, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 12
@@ -94,7 +98,9 @@ local function criarBotaoModerno(texto, pos, tamanho, acao, pai)
     local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 6) c.Parent = btn
     local stroke = Instance.new("UIStroke") stroke.Color = Color3.fromRGB(40, 45, 65) stroke.Thickness = 1 stroke.Parent = btn
     
-    btn.MouseButton1Click:Connect(function() acao(btn, stroke) end)
+    btn.MouseButton1Click:Connect(function() 
+        pcall(function() acao(btn, stroke) end)
+    end)
     return btn, stroke
 end
 
@@ -346,7 +352,7 @@ StatusLabel.BackgroundTransparency = 1
 StatusLabel.Parent = Main
 
 local function acionarBotaoUI(btnObj)
-    if not btnObj or not btnObj:IsA("GuiButton") or not btnObj.Visible then return false end
+    if not btnObj or not btnObj:IsA("GuiButton") then return false end
     pcall(function()
         if getconnections then
             for _, conn in pairs(getconnections(btnObj.MouseButton1Click)) do conn:Fire() end
@@ -385,25 +391,21 @@ end
 
 local function forcarSelecaoEasy(raidUI)
     if not raidUI then return false end
-    
     pcall(function()
         for _, desc in pairs(raidUI:GetDescendants()) do
-            if desc:IsA("GuiButton") and desc.Visible then
+            if desc:IsA("GuiButton") then
                 local nome = string.lower(desc.Name)
                 local texto = desc:IsA("TextButton") and string.lower(desc.Text) or ""
-                
                 if string.find(nome, "easy") or string.find(texto, "easy") or string.find(texto, "fácil") then
                     acionarBotaoUI(desc)
                     task.wait(0.2)
                 end
             end
         end
-        
         for _, desc in pairs(raidUI:GetDescendants()) do
-            if desc:IsA("GuiButton") and desc.Visible then
+            if desc:IsA("GuiButton") then
                 local nome = string.lower(desc.Name)
                 local texto = desc:IsA("TextButton") and string.lower(desc.Text) or ""
-                
                 if string.find(nome, "start") or string.find(texto, "start") or string.find(texto, "iniciar") then
                     acionarBotaoUI(desc)
                     task.wait(0.2)
@@ -426,7 +428,10 @@ task.spawn(function()
                     lblRaidStatus.Text = "Status Raid: Teleportando para o Lobby..."
                     lblRaidStatus.TextColor3 = Color3.fromRGB(200, 160, 80)
                     
-                    local lobby = workspace:FindFirstChild("RaidSystem") and workspace.RaidSystem:FindFirstChild("Lobbies") and workspace.RaidSystem.Lobbies:FindFirstChild("JudgmentHallRaid")
+                    local raidSystem = workspace:FindFirstChild("RaidSystem")
+                    local lobbies = raidSystem and raidSystem:FindFirstChild("Lobbies")
+                    local lobby = lobbies and lobbies:FindFirstChild("JudgmentHallRaid")
+                    
                     if lobby then
                         local posLobby = lobby:IsA("Model") and (lobby.PrimaryPart and lobby.PrimaryPart.CFrame or lobby:FindFirstChildWhichIsA("BasePart", true).CFrame) or lobby.CFrame
                         rootPlayer.CFrame = posLobby + Vector3.new(0, 3, 0)
@@ -436,17 +441,17 @@ task.spawn(function()
                     
                     lblRaidStatus.Text = "Status Raid: Selecionando Dificuldade Fácil..."
                     local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-                    local raidUI = playerGui and playerGui:WaitForChild("RaidUI", 6)
+                    local raidUI = playerGui and playerGui:FindFirstChild("RaidUI")
                     
                     if raidUI then
-                        for i = 1, 4 do
+                        for i = 1, 3 do
                             forcarSelecaoEasy(raidUI)
                             task.wait(0.3)
                         end
                     end
                     
                     lblRaidStatus.Text = "Status Raid: Aguardando entrada na Raid..."
-                    local raidInstances = workspace:WaitForChild("RaidInstances", 12)
+                    local raidInstances = workspace:FindFirstChild("RaidInstances")
                     local dentroDaRaid = false
                     
                     local timeout = 0
@@ -456,7 +461,7 @@ task.spawn(function()
                         if raidInstances and #raidInstances:GetChildren() > 0 then
                             dentroDaRaid = true
                         end
-                    until dentroDaRaid or timeout > 15 or not _G.AutoFarmRaidCicloActivo
+                    until dentroDaRaid or timeout > 12 or not _G.AutoFarmRaidCicloActivo
 
                     if dentroDaRaid then
                         lblRaidStatus.Text = "Status Raid: ⚔️ DENTRO DA RAID! Atacando..."
@@ -471,57 +476,7 @@ task.spawn(function()
 
                         repeat
                             task.wait(2)
-                        until (#raidInstances:GetChildren() == 0) or not _G.AutoFarmRaidCicloActivo
-                        
-                        lblRaidStatus.Text = "Status Raid: Teleportando para o Lobby..."
-                    lblRaidStatus.TextColor3 = Color3.fromRGB(200, 160, 80)
-                    
-                    local lobby = workspace:FindFirstChild("RaidSystem") and workspace.RaidSystem:FindFirstChild("Lobbies") and workspace.RaidSystem.Lobbies:FindFirstChild("JudgmentHallRaid")
-                    if lobby then
-                        local posLobby = lobby:IsA("Model") and (lobby.PrimaryPart and lobby.PrimaryPart.CFrame or lobby:FindFirstChildWhichIsA("BasePart", true).CFrame) or lobby.CFrame
-                        rootPlayer.CFrame = posLobby + Vector3.new(0, 3, 0)
-                    end
-
-                    task.wait(2)
-                    
-                    lblRaidStatus.Text = "Status Raid: Selecionando Dificuldade Fácil..."
-                    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-                    local raidUI = playerGui and playerGui:WaitForChild("RaidUI", 6)
-                    
-                    if raidUI then
-                        for i = 1, 4 do
-                            forcarSelecaoEasy(raidUI)
-                            task.wait(0.3)
-                        end
-                    end
-                    
-                    lblRaidStatus.Text = "Status Raid: Aguardando entrada na Raid..."
-                    local raidInstances = workspace:WaitForChild("RaidInstances", 12)
-                    local dentroDaRaid = false
-                    
-                    local timeout = 0
-                    repeat
-                        task.wait(1)
-                        timeout = timeout + 1
-                        if raidInstances and #raidInstances:GetChildren() > 0 then
-                            dentroDaRaid = true
-                        end
-                    until dentroDaRaid or timeout > 15 or not _G.AutoFarmRaidCicloActivo
-
-                    if dentroDaRaid then
-                        lblRaidStatus.Text = "Status Raid: ⚔️ DENTRO DA RAID! Atacando..."
-                        lblRaidStatus.TextColor3 = Color3.fromRGB(0, 210, 255)
-                        
-                        _G.FicarAtrasActivo = true
-                        _G.AutoClickActivo = true
-                        _G.AutoSkillsActivo = true
-                        _G.AutoSwapHotbarActivo = true
-                        _G.DistanciaAtras = 10
-                        atualizarBotoesUI()
-
-                        repeat
-                            task.wait(2)
-                        until (#raidInstances:GetChildren() == 0) or not _G.AutoFarmRaidCicloActivo
+                        until (raidInstances and #raidInstances:GetChildren() == 0) or not _G.AutoFarmRaidCicloActivo
                         
                         lblRaidStatus.Text = "Status Raid: Raid Finalizada! Resetando..."
                         lblRaidStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
@@ -544,19 +499,6 @@ task.spawn(function()
         end
     end
 end)
-
-local function encontrarOkarun()
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Humanoid") and obj.Parent and obj.Health > 0 then
-            local npcModel = obj.Parent
-            if npcModel.Name == "Okarun" or string.find(string.lower(npcModel.Name), "okarun") then
-                local rootNpc = npcModel:FindFirstChild("HumanoidRootPart")
-                if rootNpc then return rootNpc, obj end
-            end
-        end
-    end
-    return nil, nil
-end
 
 local function encontrarNpcMaisProximo(rootPlayer)
     local npcProximo = nil
@@ -583,105 +525,35 @@ end
 task.spawn(function()
     while true do
         task.wait(0.05)
-        local character = LocalPlayer.Character
-        local rootPlayer = character and character:FindFirstChild("HumanoidRootPart")
-        
-        if rootPlayer then
-            if _G.AutoOkarunActivo then
-                local rootOkarun, humOkarun = encontrarOkarun()
-                if rootOkarun and humOkarun then
-                    lblBossStatus.Text = "Status Boss: ⚔️ ATACANDO OKARUN!"
-                    lblBossStatus.TextColor3 = Color3.fromRGB(80, 255, 160)
-                    pcall(function()
-                        rootPlayer.CFrame = obterPosicaoSegura(rootOkarun, character)
-                    end)
-                end
-            end
-
-            pcall(function()
-                if _G.AtravessarNPCsActivo then
-                    for _, obj in pairs(workspace:GetDescendants()) do
-                        if obj:IsA("Humanoid") and obj.Parent and obj.Health > 0 then
-                            local npcModel = obj.Parent
-                            if not Players:GetPlayerFromCharacter(npcModel) then
-                                local rootNpc = npcModel:FindFirstChild("HumanoidRootPart")
-                                if rootNpc then
-                                    local distancia = (rootPlayer.Position - rootNpc.Position).Magnitude
-                                    if distancia <= _G.RaioDaArea then
-                                        rootNpc.CanCollide = false
-                                    end
-                                end
-                            end
-                        end
+        pcall(function()
+            local character = LocalPlayer.Character
+            local rootPlayer = character and character:FindFirstChild("HumanoidRootPart")
+            
+            if rootPlayer then
+                if _G.FicarAtrasActivo then
+                    local targetNpc = encontrarNpcMaisProximo(rootPlayer)
+                    if targetNpc then
+                        rootPlayer.CFrame = obterPosicaoSegura(targetNpc, character)
                     end
                 end
-            end)
-
-            if not _G.AutoOkarunActivo then
-                local targetNpc = encontrarNpcMaisProximo(rootPlayer)
-                if targetNpc then
-                    pcall(function()
-                        if _G.FicarAtrasActivo then
-                            rootPlayer.CFrame = obterPosicaoSegura(targetNpc, character)
-                        end
-                    end)
-                end
             end
-        end
+        end)
     end
 end)
 
--- LOOP DE ATAQUE COMPATÍVEL COM DELTA MOBILE
 task.spawn(function()
     while true do
         task.wait(0.2)
-        local character = LocalPlayer.Character
-        if character then
-            if _G.AutoClickActivo or _G.AutoSkillsActivo then
-                pcall(function()
-                    local tool = character:FindFirstChildOfClass("Tool")
-                    if tool then
-                        tool:Activate()
-                    end
-                end)
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if _G.AutoTeleportIlha then
+        pcall(function()
             local character = LocalPlayer.Character
-            local rootPlayer = character and character:FindFirstChild("HumanoidRootPart")
-            if rootPlayer then
-                StatusLabel.Text = "Status: Teleportando para " .. _G.IlhaSelecionada
-                local islandsFolder = workspace:WaitForChild("Island", 2)
-                if islandsFolder then
-                    local targetIsland = islandsFolder:FindFirstChild(_G.IlhaSelecionada)
-                    if targetIsland then
-                        local targetCFrame = nil
-                        if targetIsland:IsA("Model") then
-                            if targetIsland.PrimaryPart then
-                                targetCFrame = targetIsland.PrimaryPart.CFrame + Vector3.new(0, 10, 0)
-                            else
-                                local part = targetIsland:FindFirstChildWhichIsA("BasePart", true)
-                                if part then targetCFrame = part.CFrame + Vector3.new(0, 10, 0) end
-                            end
-                        end
-                        if targetCFrame then
-                            rootPlayer.CFrame = targetCFrame
-                            StatusLabel.Text = "Status: Chegou em " .. _G.IlhaSelecionada
-                            _G.AutoTeleportIlha = false
-                            btnTeleport.BackgroundColor3 = Color3.fromRGB(26, 29, 42)
-                            btnTeleport.Text = "🚀 TELEPORTAR PARA ILHA"
-                        end
-                    end
+            if character and (_G.AutoClickActivo or _G.AutoSkillsActivo) then
+                local tool = character:FindFirstChildOfClass("Tool")
+                if tool then
+                    tool:Activate()
                 end
             end
-        end
+        end)
     end
 end)
 
-print("[LOW PIECE] V18.1 Carregado com Suporte Delta Mobile!")
+print("[LOW PIECE] V18.2 Carregado com Sucesso!")
